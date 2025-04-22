@@ -1,6 +1,11 @@
 name: Build Examen1 Executables
 
 on:
+  workflow_dispatch:  # Permite ejecución manual
+  push:
+    branches: [main]
+
+on:
   push:
     tags: ['v*']
 
