@@ -1,86 +1,52 @@
-name: Build Examen1 Executables
+name: Build Secure Executables
 
-on:
-  push:
-    branches: [main]
+on: [push]
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller
-        pip install -r requirements.txt
-    
-    - name: Build Windows executable
-      run: |
-        pyinstaller --onefile --noconsole --hidden-import='ttkbootstrap' --collect-data='ttkbootstrap' Examen1.py
-        if (!(Test-Path dist/Examen1.exe)) { exit 1 }
-        mv dist/Examen1.exe dist/Examen1_Windows.exe
-    
-    - name: Upload Windows executable
-      uses: actions/upload-artifact@v4
-      with:
-        name: Examen1_Windows
-        path: dist/Examen1_Windows.exe
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
-  build-mac:
-    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.x'
-    
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller
-        pip install -r requirements.txt
-    
-    - name: Build Mac executable
+        pip install pyinstaller ttkbootstrap
+
+    - name: Build executable
       run: |
-        pyinstaller --onefile --noconsole --hidden-import='ttkbootstrap' --collect-data='ttkbootstrap' Examen1.py
-        if [ ! -f dist/Examen1 ]; then exit 1; fi
-        chmod +x dist/Examen1
-        mv dist/Examen1 dist/Examen1_Mac
+        pyinstaller --onefile --noconsole --uac-admin \
+                   --hidden-import='ttkbootstrap' \
+                   --collect-data='ttkbootstrap' \
+                   Examen1.py
         
-        # Opcional: Crear bundle .app
-        mkdir -p "dist/Examen1.app/Contents/MacOS"
-        cp dist/Examen1_Mac "dist/Examen1.app/Contents/MacOS/Examen1"
-        
-        cat > "dist/Examen1.app/Contents/Info.plist" <<EOL
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CFBundleExecutable</key>
-            <string>Examen1</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.yourdomain.Examen1</string>
-            <key>CFBundleName</key>
-            <string>Examen1</string>
-            <key>CFBundleVersion</key>
-            <string>1.0</string>
-        </dict>
-        </plist>
-        EOL
-    
-    - name: Upload Mac artifacts
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          mv dist/Examen1.exe dist/Examen1_${{ github.run_number }}.exe
+          # Añadir información de versión
+          exeinfo dist/Examen1_${{ github.run_number }}.exe /f VERSION
+        else
+          mv dist/Examen1 dist/Examen1_Mac_${{ github.run_number }}
+          chmod +x dist/Examen1_Mac_${{ github.run_number }}
+        fi
+
+    - name: Add reputation (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        # Descarga Microsoft Defender tools
+        curl -LO https://aka.ms/mp7zax
+        Expand-Archive .\mp7zax -DestinationPath .\mp
+        .\mp\mpcmdrun.exe -ScanFile -File dist/Examen1_${{ github.run_number }}.exe
+
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: Examen1_Mac
-        path: |
-          dist/Examen1_Mac
-          dist/Examen1.app
+        name: Executable_${{ runner.os }}_${{ github.run_number }}
+        path: dist/
