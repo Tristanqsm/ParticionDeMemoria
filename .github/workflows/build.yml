@@ -17,17 +17,20 @@ jobs:
     
     - name: Install dependencies
       run: |
+        python -m pip install --upgrade pip
         pip install pyinstaller
+        pip install -r requirements.txt
     
-    - name: Build executable
+    - name: Build Windows executable
       run: |
-        pyinstaller --onefile --noconsole Examen1.py
+        pyinstaller --onefile --noconsole --hidden-import='ttkbootstrap' --collect-data='ttkbootstrap' Examen1.py
+        if (!(Test-Path dist/Examen1.exe)) { exit 1 }
         mv dist/Examen1.exe dist/Examen1_Windows.exe
     
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4  # Versión actualizada
+    - name: Upload Windows executable
+      uses: actions/upload-artifact@v4
       with:
-        name: Windows_Executable
+        name: Examen1_Windows
         path: dist/Examen1_Windows.exe
 
   build-mac:
@@ -42,16 +45,42 @@ jobs:
     
     - name: Install dependencies
       run: |
+        python -m pip install --upgrade pip
         pip install pyinstaller
+        pip install -r requirements.txt
     
-    - name: Build executable
+    - name: Build Mac executable
       run: |
-        pyinstaller --onefile --noconsole Examen1.py
+        pyinstaller --onefile --noconsole --hidden-import='ttkbootstrap' --collect-data='ttkbootstrap' Examen1.py
+        if [ ! -f dist/Examen1 ]; then exit 1; fi
         chmod +x dist/Examen1
         mv dist/Examen1 dist/Examen1_Mac
+        
+        # Opcional: Crear bundle .app
+        mkdir -p "dist/Examen1.app/Contents/MacOS"
+        cp dist/Examen1_Mac "dist/Examen1.app/Contents/MacOS/Examen1"
+        
+        cat > "dist/Examen1.app/Contents/Info.plist" <<EOL
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>Examen1</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.yourdomain.Examen1</string>
+            <key>CFBundleName</key>
+            <string>Examen1</string>
+            <key>CFBundleVersion</key>
+            <string>1.0</string>
+        </dict>
+        </plist>
+        EOL
     
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4  # Versión actualizada
+    - name: Upload Mac artifacts
+      uses: actions/upload-artifact@v4
       with:
-        name: Mac_Executable
-        path: dist/Examen1_Mac
+        name: Examen1_Mac
+        path: |
+          dist/Examen1_Mac
+          dist/Examen1.app
