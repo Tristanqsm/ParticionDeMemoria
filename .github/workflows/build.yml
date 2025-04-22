@@ -25,7 +25,33 @@ jobs:
         mv dist/Examen1.exe dist/Examen1_Windows.exe
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # Versión actualizada
       with:
         name: Windows_Executable
         path: dist/Examen1_Windows.exe
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        pip install pyinstaller
+    
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --noconsole Examen1.py
+        chmod +x dist/Examen1
+        mv dist/Examen1 dist/Examen1_Mac
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4  # Versión actualizada
+      with:
+        name: Mac_Executable
+        path: dist/Examen1_Mac
